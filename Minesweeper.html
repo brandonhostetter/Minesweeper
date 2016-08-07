@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Minesweeper</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
+    <link href='https://fonts.googleapis.com/css?family=Lato' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="Minesweeper.css">
+</head>
+
+<body>
+    <!-- Content -->
+    <div>
+        <canvas id="info-canvas" height="50" oncontextmenu="return false" class="info-canvas"></canvas>
+        <canvas id="minesweeper-canvas" oncontextmenu="return false"></canvas>
+
+        <!-- Used to force the font to load -->
+        <div style="opacity: 0;">
+            <span style="font-family: 'Lato', sans-serif;">&nbsp;</span>
+        </div>
+
+        <!-- Minefield Size Selection Modal -->
+        <div id="pick-size-modal" class="modal fade" tabindex="-1" role="dialog">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header" style="text-align: center;">
+                        <button class="close" data-dismiss="modal"><span>&times;</span></button>
+                        <h4 class="modal-title">Select the Grid Size</h4>
+                    </div>
+                    <div class="modal-body">
+                        <button>Beginner</button>
+                        <button>Intermediate</button>
+                        <button>Expert</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="Minesweeper.js"></script>
+</body>
+</html>
