@@ -1,11 +1,3 @@
-/**
-	* TODO:
-	* Create dialog to allow user to select size of the minefield
-	* Show some indication that the game is won
-	* Allow replay
-	*
-**/
-
 var Page = {};
 // canvas variables
 Page.$canvas = null;
@@ -32,8 +24,8 @@ Page.timerIntervalId = null;
 // player
 Page.playingField = null;
 Page.isGameOver = false;
+Page.isGameWon = false;
 Page.availableFlags = -1;
-Page.isFirstClick = true;
 
 Page.initialize = function () {
     Page.$canvas = $('#minesweeper-canvas');
@@ -41,14 +33,8 @@ Page.initialize = function () {
     Page.$infoCanvas = $('#info-canvas');
     Page.infoContext = Page.$infoCanvas[0].getContext('2d');
 
-    Page.initModal();
-    $('#pick-size-modal').modal('show');
-    Page.initLargeBoard();
-    Page.playingField = Page.create2DArray(Page.boardSizeX, Page.boardSizeY);
-    Page.randomlyDisperseMines();
-    Page.findNumberOfNeighboringMines();
-    Page.attachCanvasListener();
-    Page.drawBoard();
+    Page.initSizeSelection();
+    Page.initGameOverModal();
 };
 
 //#region Setup
@@ -59,11 +45,6 @@ Page.initSmallBoard = function () {
     Page.boardSizeX = Page.smBoardSize;
     Page.boardSizeY = Page.smBoardSize;
     Page.numberOfMines = Page.smBoardMines;
-    Page.availableFlags = Page.numberOfMines;
-
-    Page.$canvas.attr('height', Page.canvasHeight);
-    Page.$canvas.attr('width', Page.canvasWidth);
-    Page.$infoCanvas.attr('width', Page.canvasWidth);
 };
 
 Page.initMediumBoard = function () {
@@ -72,11 +53,6 @@ Page.initMediumBoard = function () {
     Page.boardSizeX = Page.mdBoardSize;
     Page.boardSizeY = Page.mdBoardSize;
     Page.numberOfMines = Page.mdBoardMines;
-    Page.availableFlags = Page.numberOfMines;
-
-    Page.$canvas.attr('height', Page.canvasHeight);
-    Page.$canvas.attr('width', Page.canvasWidth);
-    Page.$infoCanvas.attr('width', Page.canvasWidth);
 };
 
 Page.initLargeBoard = function () {
@@ -85,16 +61,54 @@ Page.initLargeBoard = function () {
     Page.boardSizeX = Page.lgBoardSizeX;
     Page.boardSizeY = Page.lgBoardSizeY;
     Page.numberOfMines = Page.lgBoardMines;
-    Page.availableFlags = Page.numberOfMines;
-
-    Page.$canvas.attr('height', Page.canvasHeight);
-    Page.$canvas.attr('width', Page.canvasWidth);
-    Page.$infoCanvas.attr('width', Page.canvasWidth);
 };
 
-Page.initModal = function () {
-    $('#pick-size-modal').on('show.bs.modal', function (e) {
+Page.initSizeSelection = function () {
+    // let the user pick the size of the grid
+    var $modal = $('#pick-size-modal');
+    $modal.find('#beginner-btn').on('click', function () {
+        Page.initSmallBoard();
+        $('#pick-size-modal').modal('hide');
+    });
 
+    $modal.find('#intermediate-btn').on('click', function () {
+        Page.initMediumBoard();
+        $('#pick-size-modal').modal('hide');
+    });
+
+    $modal.find('#expert-btn').on('click', function () {
+        Page.initLargeBoard();
+        $('#pick-size-modal').modal('hide');
+    });
+
+    // continue with initialization now that we know the grid size
+    $modal.on('hidden.bs.modal', function (e) {
+        Page.$canvas.attr('height', Page.canvasHeight);
+        Page.$canvas.attr('width', Page.canvasWidth);
+        Page.$infoCanvas.attr('width', Page.canvasWidth);
+
+        Page.availableFlags = Page.numberOfMines;
+        Page.playingField = Page.create2DArray(Page.boardSizeX, Page.boardSizeY);
+        Page.randomlyDisperseMines();
+        Page.findNumberOfNeighboringMines();
+        Page.drawBoard();
+        Page.attachCanvasListener();
+    });
+
+    // show the modal
+    $modal.modal({
+        backdrop: 'static',
+        keyboard: false,
+        show: true
+    });
+};
+
+Page.initGameOverModal = function () {
+    $('#game-over-modal').on('show.bs.modal', function (e) {
+        $(this).find('#confirm-replay-game').on('click', function () {
+            Page.resetGame();
+            $('#game-over-modal').modal('hide');
+        });
     });
 };
 
@@ -103,7 +117,16 @@ Page.initModal = function () {
 //#region Event Listeners
 
 Page.attachCanvasListener = function () {
+    // use one-time event to ensure first click doesn't hit a mine and to start the stopwatch
     Page.$canvas.one('mousedown', function (e) {
+        var col = Math.floor(e.offsetX / Page.blockSpacing);
+        var row = Math.floor(e.offsetY / Page.blockSpacing);
+
+        // left click
+        if (e.which === 1) {
+            Page.ensureValidFirstClick(col, row);
+        }
+
         Page.startClock();
     });
 
@@ -123,7 +146,7 @@ Page.attachCanvasListener = function () {
             }
 
             if (Page.availableFlags === 0 && Page.checkForWinner()) {
-                console.log('winner');
+                Page.gameOver();
             }
 
             Page.drawBoard();
@@ -153,6 +176,7 @@ Page.drawBoard = function () {
             var gradient = Page.context.createRadialGradient(xCoorGrad, yCoorGrad, 0, xCoorGrad, yCoorGrad, halfBlockSize);
 
             if (selBlock.hasExpanded) {
+                // gray expanded blocks
                 gradient.addColorStop(0, 'rgba(227, 227, 227, 1)');
                 gradient.addColorStop(1, 'rgba(199, 199, 199, 1)');
 
@@ -163,7 +187,17 @@ Page.drawBoard = function () {
                 if (selBlock.numberOfMines !== 0 || selBlock.hasMine) {
                     Page.drawText(i, j, selBlock);
                 }
+            } else if (selBlock.hasFlag) {
+                // orange / yellow blocks with flags
+                gradient.addColorStop(0, 'rgba(252, 215, 66, 1)');
+                gradient.addColorStop(1, 'rgba(236, 188, 14, 1)');
+
+                Page.context.fillStyle = gradient;
+                Page.context.shadowColor = 'rgba(236, 188, 14, 1)';
+                Page.drawRoundedRect(xCoorRect, yCoorRect, 2);
+                Page.drawText(i, j, selBlock);
             } else {
+                // unexpanded blocks with or without unsure
                 gradient.addColorStop(0, 'rgba(127, 214, 254, 1)');
                 gradient.addColorStop(1, 'rgba(91, 170, 254, 1)');
 
@@ -171,7 +205,7 @@ Page.drawBoard = function () {
                 Page.context.shadowColor = 'rgba(91, 170, 254, 1)';
                 Page.drawRoundedRect(xCoorRect, yCoorRect, 2);
 
-                if (selBlock.hasFlag || selBlock.hasUnsure) {
+                if (selBlock.hasUnsure) {
                     Page.drawText(i, j, selBlock);
                 }
             }
@@ -225,6 +259,7 @@ Page.drawRoundedRect = function (x, y, radius) {
 };
 
 Page.prepareDrawGameOver = function () {
+    // Expand all unmarked mines so they'll be drawn
     for (var i = 0; i < Page.boardSizeX; i++) {
         for (var j = 0; j < Page.boardSizeY; j++) {
             var selBlock = Page.playingField[i][j];
@@ -238,7 +273,8 @@ Page.prepareDrawGameOver = function () {
 };
 
 Page.drawInfoText = function () {
-    var time = new Date() - Page.startTime;
+    // update the time and bomb count
+    var time = new Date().getTime() - Page.startTime;
     var formattedTime = Page.formatMilliseconds(time);
     var mineSymbol = String.fromCharCode(parseInt('2600', 16));
     var clockSymbol = String.fromCharCode(parseInt('23F0', 16));
@@ -255,20 +291,37 @@ Page.drawInfoText = function () {
 
 //#region Generation and Checks
 
-Page.randomlyDisperseMines = function () {
-    for (var i = 0; i < Page.numberOfMines; i++) {
-        while (true) {
-            var randomX = Math.floor(Math.random() * Page.boardSizeX);
-            var randomY = Math.floor(Math.random() * Page.boardSizeY);
-            if (!Page.playingField[randomX][randomY].hasMine) {
-                Page.playingField[randomX][randomY].hasMine = true;
-                break;
-            }
+Page.placeMine = function () {
+    // place a mine randomly throughout the minefield
+    while (true) {
+        var randomX = Math.floor(Math.random() * Page.boardSizeX);
+        var randomY = Math.floor(Math.random() * Page.boardSizeY);
+        if (!Page.playingField[randomX][randomY].hasMine) {
+            Page.playingField[randomX][randomY].hasMine = true;
+            break;
         }
     }
 };
 
+Page.ensureValidFirstClick = function (col, row) {
+    // don't allow a mine to be hit on the first click
+    var selBlock = Page.playingField[col][row];
+    if (selBlock.hasMine) {
+        // move the mine so that the game doesn't end
+        Page.placeMine();
+        selBlock.hasMine = false;
+        Page.findNumberOfNeighboringMines();
+    }
+};
+
+Page.randomlyDisperseMines = function () {
+    for (var i = 0; i < Page.numberOfMines; i++) {
+        Page.placeMine();
+    }
+};
+
 Page.findNumberOfNeighboringMines = function () {
+    // for each block, count the number of mines touching it
     for (var i = 0; i < Page.boardSizeX; i++) {
         for (var j = 0; j < Page.boardSizeY; j++) {
             if (Page.playingField[i][j].hasMine) continue;
@@ -308,6 +361,7 @@ Page.checkIfMineAtLocation = function (col, row) {
 };
 
 Page.checkExpansion = function (col, row) {
+    // recursively expand the grid at the selected point
     if (col < 0 || row < 0 || col >= Page.boardSizeX || row >= Page.boardSizeY) {
         return;
     }
@@ -351,7 +405,7 @@ Page.checkForWinner = function () {
         }
     }
 
-    Page.gameOver();
+    Page.isGameWon = true;
     return true;
 };
 
@@ -360,7 +414,8 @@ Page.checkForWinner = function () {
 //#region Helpers
 
 Page.startClock = function () {
-    Page.startTime = new Date();
+    // the stopwatch drifts a bit after a while due to setInterval but it's close enough
+    Page.startTime = new Date().getTime();
     Page.drawInfoText();
     Page.timerIntervalId = setInterval(Page.drawInfoText, 1000);
 };
@@ -464,7 +519,7 @@ Page.setTextColor = function (selBlock) {
             selBlock.textColor = 'rgba(0, 127, 128, 1)';
             break;
         case 7:
-            selBlock.textColor = 'black';
+            selBlock.textColor = 'rgba(0, 0, 0, 1)';
             break;
         case 8:
             selBlock.textColor = 'rgba(127, 127, 127, 1)';
@@ -474,7 +529,7 @@ Page.setTextColor = function (selBlock) {
 
 //#endregion Helpers
 
-//#region Game Over
+//#region Reset / Replay
 
 Page.checkGameOver = function (whichMouse, selBlock) {
     if (selBlock.hasMine && whichMouse === 1) {
@@ -486,12 +541,35 @@ Page.checkGameOver = function (whichMouse, selBlock) {
 };
 
 Page.gameOver = function (col, row) {
-    console.log('game over');
     Page.isGameOver = true;
     Page.stopClock();
+
+    if (Page.isGameWon) {
+        $('#game-over-modal').find('.modal-title').text('You Won!');
+    } else {
+        $('#game-over-modal').find('.modal-title').text('You Blew Up!');
+    }
+
+    Page.$canvas.off('mousedown');
+    $('#game-over-modal').modal('show');
 };
 
-//#endregion Game Over
+Page.resetGame = function () {
+    Page.startTime = -1;
+    Page.timerIntervalId = null;
+    Page.playingField = null;
+    Page.isGameOver = false;
+    Page.isGameWon = false;
+    Page.availableFlags = -1;
+
+    $('#pick-size-modal').modal({
+        backdrop: 'static',
+        keyboard: false,
+        show: true
+    });
+};
+
+//#endregion Reset / Replay
 
 // object for each square on the board
 var Block = function () {
