@@ -9,11 +9,11 @@
     <link rel="stylesheet" type="text/css" href="Minesweeper.css">
 </head>
 
-<body>
+<body oncontextmenu="return false">
     <!-- Content -->
     <div>
-        <canvas id="info-canvas" height="50" oncontextmenu="return false" class="info-canvas"></canvas>
-        <canvas id="minesweeper-canvas" oncontextmenu="return false"></canvas>
+        <canvas id="info-canvas" height="50" class="info-canvas"></canvas>
+        <canvas id="minesweeper-canvas"></canvas>
 
         <!-- Used to force the font to load -->
         <div style="opacity: 0;">
@@ -21,17 +21,35 @@
         </div>
 
         <!-- Minefield Size Selection Modal -->
-        <div id="pick-size-modal" class="modal fade" tabindex="-1" role="dialog">
-            <div class="modal-dialog">
+        <div id="pick-size-modal" class="modal" tabindex="-1" role="dialog">
+            <div class="modal-dialog modal-sm">
                 <div class="modal-content">
                     <div class="modal-header" style="text-align: center;">
-                        <button class="close" data-dismiss="modal"><span>&times;</span></button>
                         <h4 class="modal-title">Select the Grid Size</h4>
                     </div>
                     <div class="modal-body">
-                        <button>Beginner</button>
-                        <button>Intermediate</button>
-                        <button>Expert</button>
+                        <button id="beginner-btn" class="btn btn-default grid-size-btn">Beginner</button>
+                        <button id="intermediate-btn" class="btn btn-default grid-size-btn">Intermediate</button>
+                        <button id="expert-btn" class="btn btn-default grid-size-btn">Expert</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- End Game Modal -->
+        <div id="game-over-modal" class="modal fade" tabindex="-1" role="dialog">
+            <div class="modal-dialog modal-sm">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button class="close" data-dismiss="modal"><span>&times;</span></button>
+                        <h4 class="modal-title">New Game?</h4>
+                    </div>
+                    <div class="modal-body">
+                        <p>Would you like to start a new game?</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button id="confirm-replay-game" class="btn btn-primary">Yes</button>
+                        <button class="btn btn-default" data-dismiss="modal">No</button>
                     </div>
                 </div>
             </div>
