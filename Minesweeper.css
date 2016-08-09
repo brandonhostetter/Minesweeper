@@ -1,6 +1,5 @@
 body {
     font-family: 'Lato', sans-serif;
-    /*	background-color: #555555; */
     background-color: rgba(51, 56, 60, 1);
 }
 
@@ -10,6 +9,12 @@ canvas {
 }
 
 .info-canvas {
-    margin-top: 50px;
+    margin-top: 25px;
     margin-bottom: 5px;
+}
+
+.grid-size-btn {
+    display: block;
+    margin: 5px auto;
+    min-width: 110px;
 }
